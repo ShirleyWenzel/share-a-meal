@@ -146,7 +146,59 @@ const mealController = {
         });
       });
     });
-  }
+  },
+
+  getMealById: (req, res, next) => {
+  const mealId = parseInt(req.params.id);
+
+  db.getConnection((err, conn) => {
+    if (err) return next({ status: 500, message: 'Databasefout' });
+
+    const query = `
+      SELECT 
+        m.id, m.name, m.description, m.price, m.dateTime,
+        m.maxAmountOfParticipants, m.imageUrl,
+        u.id AS cookId, u.firstName, u.lastName
+      FROM meal m
+      LEFT JOIN user u ON m.cookId = u.id
+      WHERE m.id = ?
+    `;
+
+    conn.query(query, [mealId], (err, results) => {
+      conn.release();
+      if (err) return next({ status: 500, message: 'Queryfout' });
+
+      if (results.length === 0) {
+        return res.status(404).json({
+          status: 404,
+          message: 'Maaltijd niet gevonden',
+          data: {}
+        });
+      }
+
+      const m = results[0];
+
+      res.status(200).json({
+        status: 200,
+        message: 'Maaltijddetails opgehaald',
+        data: {
+          id: m.id,
+          name: m.name,
+          description: m.description,
+          price: m.price,
+          dateTime: m.dateTime,
+          maxAmountOfParticipants: m.maxAmountOfParticipants,
+          imageUrl: m.imageUrl,
+          cook: {
+            id: m.cookId,
+            firstName: m.firstName,
+            lastName: m.lastName
+          }
+        }
+      });
+    });
+  });
+}
 
 };
 

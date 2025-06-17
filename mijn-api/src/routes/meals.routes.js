@@ -8,5 +8,5 @@ const { validateCreateMeal, validateMealUpdate } = require('../middleware/meal.v
 router.post('/', validateToken, validateCreateMeal, mealController.createMeal);
 router.put('/:id', validateToken, validateMealUpdate, mealController.updateMeal);
 router.get('/', mealController.getAllMeals);
-
+router.get('/:id', mealController.getMealById);
 module.exports = router;
