@@ -22,6 +22,9 @@ app.use('/api/auth', authRoutes);
 const userRoutes = require('./src/routes/users.routes');
 app.use('/api/users', userRoutes);
 
+const mealRoutes = require('./src/routes/meals.routes');
+app.use('/api/meals', mealRoutes);
+
 const { validateToken } = require('./src/routes/authentication.routes');
 
 app.get('/api/user/info', validateToken, (req, res) => {
