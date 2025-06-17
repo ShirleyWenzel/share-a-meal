@@ -1,16 +1,21 @@
 const express = require('express');
 const app = express();
-const PORT = 3000;
+const db = require('./db');
 
-// Middleware om JSON te kunnen lezen
+const PORT = 3000;
 app.use(express.json());
 
-// Routes
-app.get('/', (req, res) => {
-  res.send('Welkom bij mijn API!');
+app.get('/meals', async (req, res) => {
+  console.log('✅ /meals wordt aangeroepen');
+  try {
+    const [meals] = await db.query('SELECT * FROM meal');
+    res.json(meals);
+  } catch (err) {
+    console.error('❌ Databasefout:', err);
+    res.status(500).send('Databasefout');
+  }
 });
 
-// Start de server
 app.listen(PORT, () => {
-  console.log(`Server draait op http://localhost:${PORT}`);
+  console.log(`✅ Server draait op http://localhost:${PORT}`);
 });
