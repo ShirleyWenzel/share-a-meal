@@ -95,6 +95,52 @@ const userController = {
       });
     });
   });
+},
+
+getUserProfileById: (req, res, next) => {
+  const userId = req.params.id;
+
+  db.getConnection((err, conn) => {
+    if (err) return next({ status: 500, message: 'Databasefout' });
+
+    // Zoek gebruiker
+    conn.query(
+      `SELECT id, firstName, lastName, emailAdress, isActive FROM user WHERE id = ?`,
+      [userId],
+      (err, results) => {
+        if (err) {
+          conn.release();
+          return next({ status: 500, message: 'Queryfout' });
+        }
+
+        if (results.length === 0) {
+          conn.release();
+          return next({ status: 404, message: 'Gebruiker niet gevonden' });
+        }
+
+        const user = results[0];
+
+        // Zoek toekomstige maaltijden
+        conn.query(
+          `SELECT id, name, dateTime FROM meal WHERE cookId = ? AND dateTime > NOW()`,
+          [userId],
+          (err, meals) => {
+            conn.release();
+            if (err) return next({ status: 500, message: 'Fout bij ophalen maaltijden' });
+
+            res.status(200).json({
+              status: 200,
+              message: 'Gebruiker en maaltijden opgehaald',
+              data: {
+                ...user,
+                futureMeals: meals
+              }
+            });
+          }
+        );
+      }
+    );
+  });
 }
 };
 

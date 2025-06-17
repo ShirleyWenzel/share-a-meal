@@ -5,5 +5,6 @@ const { validateToken } = require('./authentication.routes');
 
 router.get('/', validateToken, userController.getAllUsers);
 router.get('/profile', validateToken, userController.getOwnProfile);
+router.get('/:id', validateToken, userController.getUserProfileById);
 
 module.exports = router;
