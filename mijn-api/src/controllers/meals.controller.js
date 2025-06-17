@@ -198,6 +198,65 @@ const mealController = {
       });
     });
   });
+},
+
+deleteMeal: (req, res, next) => {
+  const mealId = parseInt(req.params.id);
+  const userId = req.userId;
+
+  db.getConnection((err, conn) => {
+    if (err) return next({ status: 500, message: 'Databaseverbinding mislukt' });
+
+    // Stap 1: check of maaltijd bestaat
+    conn.query('SELECT * FROM meal WHERE id = ?', [mealId], (err, results) => {
+      if (err) {
+        conn.release();
+        return next({ status: 500, message: 'Queryfout bij zoeken maaltijd' });
+      }
+
+      if (results.length === 0) {
+        conn.release();
+        return res.status(404).json({
+          status: 404,
+          message: 'Maaltijd niet gevonden',
+          data: {}
+        });
+      }
+
+      const meal = results[0];
+
+      // Stap 2: check of user de eigenaar is
+      if (meal.cookId !== userId) {
+        conn.release();
+        return res.status(403).json({
+          status: 403,
+          message: 'Je bent niet de eigenaar van deze maaltijd',
+          data: {}
+        });
+      }
+
+      // Stap 3: verwijder eerst de aanmeldingen, daarna de maaltijd
+      conn.query('DELETE FROM meal_participants_user WHERE mealId = ?', [mealId], (err) => {
+        if (err) {
+          conn.release();
+          return next({ status: 500, message: 'Fout bij verwijderen aanmeldingen' });
+        }
+
+        conn.query('DELETE FROM meal WHERE id = ?', [mealId], (err) => {
+          conn.release();
+          if (err) return next({ status: 500, message: 'Fout bij verwijderen maaltijd' });
+
+          res.status(200).json({
+            status: 200,
+            message: 'Maaltijd en aanmeldingen succesvol verwijderd',
+            data: {
+              deleted: mealId
+            }
+          });
+        });
+      });
+    });
+  });
 }
 
 };
