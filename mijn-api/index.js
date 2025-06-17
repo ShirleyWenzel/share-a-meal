@@ -16,7 +16,7 @@ app.get('/meals', async (req, res) => {
   }
 });
 
-const { routes: authRoutes } = require('./src/routes/authentication.routes');
+const authRoutes = require('./src/routes/authentication.routes').routes;
 app.use('/api/auth', authRoutes);
 
 const { validateToken } = require('./src/routes/authentication.routes');

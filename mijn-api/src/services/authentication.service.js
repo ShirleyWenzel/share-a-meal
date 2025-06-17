@@ -1,173 +1,81 @@
-//
-// Authentication controller
-//
 const jwt = require('jsonwebtoken')
 const db = require('../dao/mysql-db')
-// const validateEmail = require('../util/emailvalidator')
 const logger = require('../util/logger')
 const jwtSecretKey = require('../util/config').secretkey
 
-const authController = {
+const authService = {
     login: (userCredentials, callback) => {
         logger.debug('login');
-    console.log('🟡 trying db.getConnection');
         db.getConnection((err, connection) => {
             if (err) {
                 logger.error(err);
-                console.log('❌ Fout bij verbinden met database:', err);
-                callback({ status: 500, message: 'Databasefout' }, null);
-                return;
+                return callback({ status: 500, message: 'Databasefout' });
             }
-    console.log('🔌 Verbonden met database');
-            if (connection) {
-                // 1. Check if the user exists.
-                console.log('🔌 Verbonden met database');
-                connection.query(
-                    'SELECT `id`, `emailAdress`, `password`, `firstName`, `lastName` FROM `user` WHERE `emailAdress` = ?',
-                    [userCredentials.emailAdress],
-                    (err, rows, fields) => {
-                         console.log('✅ Query uitgevoerd');
-                        connection.release();
-                        if (err) {
-                            logger.error('Error: ', err.toString());
-                            callback(err.message, null);
-                            return;
-                        }
-    
-                        if (rows && rows.length === 1) {
-                            const user = rows[0];
-                            // 2. User exists, check the password.
-                            if (user.password === userCredentials.password) {
-                                logger.debug('Passwords DID match, sending userinfo and valid token');
-                                // Extract the password from the userdata - we do not send that in the response.
-                                const { password, ...userinfo } = user;
-                                // Create an object containing the data we want in the payload.
-                                const payload = {
-                                    userId: userinfo.id
-                                };
-    
-                                jwt.sign(
-                                    payload,
-                                    jwtSecretKey,
-                                    { expiresIn: '12d' },
-                                    (err, token) => {
-                                        if (err) {
-                                            logger.error('Error signing token: ', err.toString());
-                                            callback(err.message, null);
-                                            return;
-                                        }
-    
-                                        logger.info('User logged in, sending: ', userinfo);
-                                        callback(null, {
-                                            status: 200,
-                                            message: 'User logged in',
-                                            data: { ...userinfo, token }
-                                        });
-                                    }
-                                );
-                            } else {
-                                logger.debug('Invalid password');
-                                callback(
-                                    {
-                                        status: 400,
-                                        message: 'Invalid password',
-                                        data: {}
-                                    },
-                                    null
-                                );
+
+            connection.query(
+                'SELECT `id`, `emailAdress`, `password`, `firstName`, `lastName` FROM `user` WHERE `emailAdress` = ?',
+                [userCredentials.emailAdress],
+                (err, rows) => {
+                    connection.release();
+                    if (err) {
+                        logger.error('Error: ', err.toString());
+                        return callback({ status: 500, message: err.message });
+                    }
+
+                    if (rows.length === 1 && rows[0].password === userCredentials.password) {
+                        const { password, ...userinfo } = rows[0];
+                        const payload = { userId: userinfo.id };
+
+                        jwt.sign(payload, jwtSecretKey, { expiresIn: '12d' }, (err, token) => {
+                            if (err) {
+                                return callback({ status: 500, message: 'Token signing error' });
                             }
-                        } else {
-                            logger.debug('User not found');
-                            callback(
-                                {
-                                    status: 404,
-                                    message: 'User not found',
-                                    data: {}
-                                },
-                                null
-                            );
-                        }
+                            callback(null, {
+                                status: 200,
+                                message: 'User logged in',
+                                data: { ...userinfo, token }
+                            });
+                        });
+                    } else {
+                        return callback({ status: 400, message: 'Ongeldig e-mailadres of wachtwoord' });
+                    }
+                }
+            );
+        });
+    },
+
+    register: (user, callback) => {
+        db.getConnection((err, conn) => {
+            if (err) return callback({ status: 500, message: 'Databasefout' });
+
+            conn.query('SELECT id FROM user WHERE emailAdress = ?', [user.emailAdress], (err, rows) => {
+                if (err) {
+                    conn.release();
+                    return callback({ status: 500, message: 'Queryfout' });
+                }
+
+                if (rows.length > 0) {
+                    conn.release();
+                    return callback({ status: 409, message: 'Email bestaat al' });
+                }
+
+                conn.query(
+                    `INSERT INTO user (emailAdress, password, firstName, lastName) VALUES (?, ?, ?, ?)`,
+                    [user.emailAdress, user.password, user.firstName, user.lastName],
+                    (err, results) => {
+                        conn.release();
+                        if (err) return callback({ status: 500, message: 'Fout bij opslaan' });
+                        callback(null, {
+                            id: results.insertId,
+                            emailAdress: user.emailAdress,
+                            firstName: user.firstName,
+                            lastName: user.lastName
+                        });
                     }
                 );
-            }
+            });
         });
-    }
-,
-
-    login2: (req, res, next) => {
-        dbconnection.getConnection((err, connection) => {
-            if (err) {
-                logger.error('Error getting connection from dbconnection')
-                return next({
-                    status: err.status,
-                    message: error.message,
-                    data: {}
-                })
-            }
-            if (connection) {
-                // 1. Kijk of deze useraccount bestaat.
-                connection.query(
-                    'SELECT `id`, `emailAdress`, `password`, `firstName`, `lastName` FROM `user` WHERE `emailAdress` = ?',
-                    [req.body.emailAdress],
-                    (err, rows, fields) => {
-                        connection.release()
-                        if (err) {
-                            logger.error('Error: ', err.toString())
-                            return next({
-                                status: err.status,
-                                message: error.message,
-                                data: {}
-                            })
-                        }
-                        if (rows) {
-                            // 2. Er was een resultaat, check het password.
-                            if (
-                                rows &&
-                                rows.length === 1 &&
-                                rows[0].password == req.body.password
-                            ) {
-                                logger.info(
-                                    'passwords DID match, sending userinfo and valid token'
-                                )
-                                // Extract the password from the userdata - we do not send that in the response.
-                                const { password, ...userinfo } = rows[0]
-                                // Create an object containing the data we want in the payload.
-                                const payload = {
-                                    userId: userinfo.id
-                                }
-
-                                jwt.sign(
-                                    payload,
-                                    jwtSecretKey,
-                                    { expiresIn: '12d' },
-                                    function (err, token) {
-                                        logger.debug(
-                                            'User logged in, sending: ',
-                                            userinfo
-                                        )
-                                        res.status(200).json({
-                                            statusCode: 200,
-                                            results: { ...userinfo, token }
-                                        })
-                                    }
-                                )
-                            } else {
-                                logger.info(
-                                    'User not found or password invalid'
-                                )
-                                return next({
-                                    status: 409,
-                                    message:
-                                        'User not found or password invalid',
-                                    data: {}
-                                })
-                            }
-                        }
-                    }
-                )
-            }
-        })
     }
 }
 
-module.exports = authController
+module.exports = authService

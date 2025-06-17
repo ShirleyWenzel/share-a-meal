@@ -75,6 +75,20 @@ function validateToken(req, res, next) {
     }
 }
 
+function validateRegistration(req, res, next) {
+  try {
+    assert(typeof req.body.emailAdress === 'string', 'Email is verplicht');
+    assert(typeof req.body.password === 'string', 'Wachtwoord is verplicht');
+    assert(typeof req.body.firstName === 'string', 'Voornaam is verplicht');
+    assert(typeof req.body.lastName === 'string', 'Achternaam is verplicht');
+    next();
+  } catch (err) {
+    next({ status: 400, message: err.message });
+  }
+}
+
+
 routes.post('/login', validateLogin, AuthController.login)
+routes.post('/register', validateRegistration, AuthController.register);
 
 module.exports = { routes, validateToken }
