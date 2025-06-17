@@ -32,4 +32,22 @@ function validateCreateMeal(req, res, next) {
   next();
 }
 
-module.exports = { validateCreateMeal };
+function validateMealUpdate(req, res, next) {
+  const { name, price, maxAmountOfParticipants } = req.body;
+
+  if (!name || typeof name !== 'string') {
+    return res.status(400).json({ status: 400, message: 'Ongeldige naam' });
+  }
+
+  if (typeof price !== 'number' || price < 0) {
+    return res.status(400).json({ status: 400, message: 'Ongeldige prijs' });
+  }
+
+  if (!Number.isInteger(maxAmountOfParticipants) || maxAmountOfParticipants < 1) {
+    return res.status(400).json({ status: 400, message: 'Ongeldig aantal deelnemers' });
+  }
+
+  next();
+}
+
+module.exports = { validateCreateMeal, validateMealUpdate };
