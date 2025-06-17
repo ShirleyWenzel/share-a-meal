@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const db = require('./db');
+const db = require('./src/dao/mysql-db');
 
 const PORT = 3000;
 app.use(express.json());
@@ -14,6 +14,18 @@ app.get('/meals', async (req, res) => {
     console.error('❌ Databasefout:', err);
     res.status(500).send('Databasefout');
   }
+});
+
+const { routes: authRoutes } = require('./src/routes/authentication.routes');
+app.use('/api/auth', authRoutes);
+
+const { validateToken } = require('./src/routes/authentication.routes');
+
+app.get('/api/user/info', validateToken, (req, res) => {
+  res.status(200).json({
+    message: 'Toegang toegestaan!',
+    userId: req.userId
+  });
 });
 
 app.listen(PORT, () => {
