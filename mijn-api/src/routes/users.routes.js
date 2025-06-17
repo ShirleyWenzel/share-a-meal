@@ -8,5 +8,6 @@ router.get('/', validateToken, userController.getAllUsers);
 router.get('/profile', validateToken, userController.getOwnProfile);
 router.get('/:id', validateToken, userController.getUserProfileById);
 router.put('/:id', validateToken, validateUserData, userController.updateUser);
+router.delete('/:id', validateToken, userController.deleteUser);
 
 module.exports = router;

@@ -171,6 +171,52 @@ updateUser: (req, res, next) => {
       data: {}
     });
   }
+},
+
+deleteUser: (req, res, next) => {
+  const userIdFromParams = parseInt(req.params.id);
+  const userIdFromToken = req.userId;
+
+  if (userIdFromParams !== userIdFromToken) {
+    return res.status(403).json({
+      status: 403,
+      message: 'Je mag alleen je eigen account verwijderen.',
+      data: {}
+    });
+  }
+
+  db.getConnection((err, conn) => {
+    if (err) return next({ status: 500, message: 'Databasefout', data: {} });
+
+    // Check of de user bestaat
+    conn.query('SELECT id FROM user WHERE id = ?', [userIdFromParams], (err, results) => {
+      if (err) {
+        conn.release();
+        return next({ status: 500, message: 'Queryfout', data: {} });
+      }
+
+      if (results.length === 0) {
+        conn.release();
+        return res.status(404).json({
+          status: 404,
+          message: 'Gebruiker niet gevonden',
+          data: {}
+        });
+      }
+
+      // Verwijder de gebruiker
+      conn.query('DELETE FROM user WHERE id = ?', [userIdFromParams], (err, deleteResult) => {
+        conn.release();
+        if (err) return next({ status: 500, message: 'Verwijderen mislukt', data: {} });
+
+        res.status(200).json({
+          status: 200,
+          message: 'Gebruiker succesvol verwijderd',
+          data: {}
+        });
+      });
+    });
+  });
 }
 };
 
