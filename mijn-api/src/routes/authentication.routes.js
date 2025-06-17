@@ -7,29 +7,33 @@ const jwtSecretKey = require('../util/config').secretkey
 const routes = require('express').Router()
 const AuthController = require('../controllers/authentication.controller.js')
 const logger = require('../util/logger')
+const { validateUserData } = require('../middleware/user.validator');
 
 //
 //
 //
+
+
 function validateLogin(req, res, next) {
-    // Verify that we receive the expected input
-    try {
-        assert(
-            typeof req.body.emailAdress === 'string',
-            'email must be a string.'
-        )
-        assert(
-            typeof req.body.password === 'string',
-            'password must be a string.'
-        )
-        next()
-    } catch (ex) {
-        next({
-            status: 400,
-            message: ex.toString(),
-            data: {}
-        })
-    }
+  const { emailAdress, password } = req.body;
+
+  if (typeof emailAdress !== 'string') {
+    return next({
+      status: 400,
+      message: 'emailAdress moet een string zijn',
+      data: {}
+    });
+  }
+
+  if (typeof password !== 'string') {
+    return next({
+      status: 400,
+      message: 'password moet een string zijn',
+      data: {}
+    });
+  }
+
+  next(); // ✅ validatie geslaagd
 }
 
 //
@@ -89,6 +93,6 @@ function validateRegistration(req, res, next) {
 
 
 routes.post('/login', validateLogin, AuthController.login)
-routes.post('/register', validateRegistration, AuthController.register);
+routes.post('/register', validateRegistration, validateUserData, AuthController.register);
 
 module.exports = { routes, validateToken }

@@ -31,6 +31,14 @@ app.get('/api/user/info', validateToken, (req, res) => {
   });
 });
 
+app.use((err, req, res, next) => {
+  res.status(err.status || 500).json({
+    status: err.status || 500,
+    message: err.message || 'Interne serverfout',
+    data: err.data || {}
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`✅ Server draait op http://localhost:${PORT}`);
 });
