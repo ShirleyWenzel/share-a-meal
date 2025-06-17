@@ -106,7 +106,48 @@ const mealController = {
       });
     });
   });
-}
+},
+
+  getAllMeals: (req, res, next) => {
+    db.getConnection((err, conn) => {
+      if (err) return next({ status: 500, message: 'Databaseverbinding mislukt' });
+
+      const query = `
+        SELECT 
+          m.id, m.name, m.description, m.price, m.dateTime, 
+          m.maxAmountOfParticipants, m.imageUrl, 
+          u.id AS cookId, u.firstName AS cookFirstName, u.lastName AS cookLastName
+        FROM meal m
+        LEFT JOIN user u ON m.cookId = u.id`;
+
+      conn.query(query, (err, results) => {
+        conn.release();
+        if (err) return next({ status: 500, message: 'Databasequery mislukt' });
+
+        const formattedMeals = results.map(r => ({
+          id: r.id,
+          name: r.name,
+          description: r.description,
+          price: r.price,
+          dateTime: r.dateTime,
+          maxAmountOfParticipants: r.maxAmountOfParticipants,
+          imageUrl: r.imageUrl,
+          cook: {
+            id: r.cookId,
+            firstName: r.cookFirstName,
+            lastName: r.cookLastName
+          }
+        }));
+
+        res.status(200).json({
+          status: 200,
+          message: 'Maaltijden opgehaald',
+          data: formattedMeals
+        });
+      });
+    });
+  }
+
 };
 
 module.exports = mealController;

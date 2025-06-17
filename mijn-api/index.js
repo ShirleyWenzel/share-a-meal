@@ -5,16 +5,6 @@ const db = require('./src/dao/mysql-db');
 const PORT = 3000;
 app.use(express.json());
 
-app.get('/meals', async (req, res) => {
-  console.log('✅ /meals wordt aangeroepen');
-  try {
-    const [meals] = await db.query('SELECT * FROM meal');
-    res.json(meals);
-  } catch (err) {
-    console.error('❌ Databasefout:', err);
-    res.status(500).send('Databasefout');
-  }
-});
 
 const authRoutes = require('./src/routes/authentication.routes').routes;
 app.use('/api/auth', authRoutes);
