@@ -218,3 +218,48 @@ describe('UC-202 Opvragen van overzicht van users', () => {
       });
   });
 });
+
+describe('UC-203 Opvragen van gebruikersprofiel', () => {
+  // Eerst inloggen om een geldig token te krijgen
+  before((done) => {
+    chai.request(server)
+      .post('/api/login')
+      .send({ emailAdress: 'j.wenzel@avans.nl', password: 'Wachtwoord123' }) // Gebruik geldige testgegevens
+      .end((err, res) => {
+        should.not.exist(err);
+        res.should.have.status(200);
+        res.body.should.have.property('data');
+        res.body.data.should.have.property('token');
+        token = res.body.data.token;
+        done();
+      });
+  });
+
+  it('TC-203-1 Ongeldig token', (done) => {
+    chai.request(server)
+      .get('/api/user/profile')
+      .set('Authorization', 'Bearer ongeldigtoken123')
+      .end((err, res) => {
+        res.should.have.status(401);
+        res.body.should.have.property('message').that.is.a('string');
+        done();
+      });
+  });
+
+  it('TC-203-2 Gebruiker is ingelogd met geldig token', (done) => {
+    chai.request(server)
+      .get('/api/user/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.should.have.status(200);
+        res.body.should.have.property('message').that.is.a('string');
+        res.body.should.have.property('data').that.is.an('object');
+        res.body.data.should.have.property('id').that.is.a('number');
+        res.body.data.should.have.property('firstName').that.is.a('string');
+        res.body.data.should.have.property('lastName').that.is.a('string');
+        res.body.data.should.have.property('emailAdress').that.is.a('string');
+        done();
+      });
+  });
+});
