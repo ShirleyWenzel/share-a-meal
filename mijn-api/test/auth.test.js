@@ -6,6 +6,7 @@ const should = chai.should();
 chai.use(chaiHttp);
 
 let token;
+const existingUserId = 49;
 
 describe('UC-101 Inloggen', () => {
   it('TC-101-1 Verplicht veld ontbreekt', (done) => {
@@ -312,6 +313,103 @@ describe('UC-204 Opvragen van usergegevens bij ID', () => {
         res.body.data.should.have.property('emailAdress');
         res.body.data.should.have.property('firstName');
         res.body.data.should.have.property('lastName');
+        done();
+      });
+  });
+});
+
+
+describe('UC-205 Updaten van usergegevens', () => {
+  // Haal token op vóór tests
+  before((done) => {
+    chai.request(server)
+      .post('/api/login')
+      .send({ emailAdress: 'j.wenzel@avans.nl', password: 'Wachtwoord123' })
+      .end((err, res) => {
+        should.not.exist(err);
+        res.should.have.status(200);
+        token = res.body.data.token;
+        done();
+      });
+  });
+
+  it('TC-205-1 Verplicht veld "emailAdress" ontbreekt', (done) => {
+    chai.request(server)
+      .put(`/api/user/${existingUserId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ firstName: 'NieuweNaam' }) // emailAdress ontbreekt
+      .end((err, res) => {
+        res.should.have.status(400);
+        res.body.should.have.property('message');
+        done();
+      });
+  });
+
+  it('TC-205-2 Gebruiker is niet de eigenaar van de data', (done) => {
+    const otherUserId = 45; // een andere userId dan ingelogde user
+    chai.request(server)
+      .put(`/api/user/${otherUserId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ emailAdress: 'j.wenzel@avans.nl', firstName: 'Test' })
+      .end((err, res) => {
+        res.should.have.status(403);
+        res.body.should.have.property('message');
+        done();
+      });
+  });
+
+  it('TC-205-3 Niet-valide telefoonnummer', (done) => {
+    chai.request(server)
+      .put(`/api/user/${existingUserId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        emailAdress: 'j.wenzel@avans.nl',
+        phoneNumber: 'abc123' // ongeldig telefoonnummer
+      })
+      .end((err, res) => {
+        res.should.have.status(400);
+        res.body.should.have.property('message');
+        done();
+      });
+  });
+
+it('TC-205-4 Gebruiker bestaat niet', (done) => {
+  chai.request(server)
+    .put('/api/user/999999') // userId die niet bestaat
+    .set('Authorization', `Bearer ${token}`)
+    .send({
+      emailAdress: 'j.wenzel@avans.nl',
+      phoneNumber: '0612345678'
+    }) // verplicht veld meesturen!
+    .end((err, res) => {
+      res.should.have.status(404);
+      res.body.should.have.property('message').that.includes('bestaat niet');
+      done();
+    });
+});
+  it('TC-205-5 Niet ingelogd', (done) => {
+    chai.request(server)
+      .put(`/api/user/${existingUserId}`)
+      .send({ emailAdress: 'j.wenzel@avans.nl', firstName: 'Test' }) // zonder token
+      .end((err, res) => {
+        res.should.have.status(401);
+        res.body.should.have.property('message');
+        done();
+      });
+  });
+
+  it('TC-205-6 Gebruiker succesvol gewijzigd', (done) => {
+    chai.request(server)
+      .put(`/api/user/${existingUserId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        emailAdress: 'j.wenzel@avans.nl',
+        firstName: 'NieuweNaam',
+        phoneNumber: '0612345678'
+      })
+      .end((err, res) => {
+        res.should.have.status(200);
+        res.body.should.have.property('message');
         done();
       });
   });

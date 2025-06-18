@@ -116,66 +116,70 @@ const userController = {
 updateUser: (req, res, next) => {
   try {
     const userIdFromParams = parseInt(req.params.id);
-    const userIdFromToken = req.userId;
-
-    if (userIdFromParams !== userIdFromToken) {
-      return res.status(403).json({
-        status: 403,
-        message: 'Je mag alleen je eigen gegevens wijzigen.',
-        data: {}
-      });
-    }
-
-    const { emailAdress, phoneNumber } = req.body;
-    if (!emailAdress || !phoneNumber) {
-      return res.status(400).json({
-        status: 400,
-        message: 'Verplichte velden ontbreken of zijn ongeldig.',
-        data: {}
-      });
-    }
 
     db.getConnection((err, conn) => {
       if (err) {
-        return next({
-          status: 500,
-          message: err.message || 'Databasefout',
-          data: {}
-        });
+        return next({ status: 500, message: 'Databasefout', data: {} });
       }
 
-      conn.query(
-        `UPDATE user SET emailAdress = ?, phoneNumber = ? WHERE id = ?`,
-        [emailAdress, phoneNumber, userIdFromParams],
-        (err) => {
+      // Eerst check of user bestaat
+      conn.query('SELECT id FROM user WHERE id = ?', [userIdFromParams], (err, rows) => {
+        if (err) {
           conn.release();
+          return next({ status: 500, message: 'Query fout', data: {} });
+        }
 
-          if (err) {
-            return next({
-              status: 500,
-              message: err.message || 'Update mislukt',
-              data: {}
-            });
-          }
-
-          res.status(200).json({
-            status: 200,
-            message: 'Gegevens succesvol bijgewerkt',
-            data: {
-              id: userIdFromParams,
-              emailAdress,
-              phoneNumber
-            }
+        if (rows.length === 0) {
+          conn.release();
+          return res.status(404).json({
+            status: 404,
+            message: 'Gebruiker bestaat niet',
+            data: {}
           });
         }
-      );
+
+        // User bestaat, nu check rechten
+        const userIdFromToken = req.userId;
+        if (userIdFromParams !== userIdFromToken) {
+          conn.release();
+          return res.status(403).json({
+            status: 403,
+            message: 'Je mag alleen je eigen gegevens wijzigen.',
+            data: {}
+          });
+        }
+
+        // Valideer velden
+        const { emailAdress, phoneNumber } = req.body;
+        if (!emailAdress || !phoneNumber) {
+          conn.release();
+          return res.status(400).json({
+            status: 400,
+            message: 'Verplichte velden ontbreken of zijn ongeldig.',
+            data: {}
+          });
+        }
+
+        conn.query(
+          'UPDATE user SET emailAdress = ?, phoneNumber = ? WHERE id = ?',
+          [emailAdress, phoneNumber, userIdFromParams],
+          (err) => {
+            conn.release();
+            if (err) {
+              return next({ status: 500, message: 'Update mislukt', data: {} });
+            }
+
+            res.status(200).json({
+              status: 200,
+              message: 'Gegevens succesvol bijgewerkt',
+              data: { id: userIdFromParams, emailAdress, phoneNumber }
+            });
+          }
+        );
+      });
     });
   } catch (err) {
-    next({
-      status: 500,
-      message: err.message || 'Onbekende fout in updateUser',
-      data: {}
-    });
+    next({ status: 500, message: 'Onbekende fout in updateUser', data: {} });
   }
 },
 
