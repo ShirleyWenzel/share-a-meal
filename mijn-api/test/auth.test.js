@@ -263,3 +263,56 @@ describe('UC-203 Opvragen van gebruikersprofiel', () => {
       });
   });
 });
+
+describe('UC-204 Opvragen van usergegevens bij ID', () => {
+  // Haal token op via login voor geldige tests
+  before((done) => {
+    chai.request(server)
+      .post('/api/login')
+      .send({ emailAdress: 'j.wenzel@avans.nl', password: 'Wachtwoord123' })
+      .end((err, res) => {
+        should.not.exist(err);
+        res.should.have.status(200);
+        token = res.body.data.token;
+        done();
+      });
+  });
+
+  it('TC-204-1 Ongeldig token', (done) => {
+    chai.request(server)
+      .get('/api/user/49') // Voorbeeld userId
+      .set('Authorization', 'Bearer ongeldigtoken123')
+      .end((err, res) => {
+        res.should.have.status(401);
+        res.body.should.have.property('message');
+        done();
+      });
+  });
+
+  it('TC-204-2 Gebruiker-ID bestaat niet', (done) => {
+    chai.request(server)
+      .get('/api/user/9999999') // Niet bestaande userId
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        res.should.have.status(404);
+        res.body.should.have.property('message');
+        done();
+      });
+  });
+
+  it('TC-204-3 Gebruiker-ID bestaat', (done) => {
+    chai.request(server)
+      .get('/api/user/49') // Voorbeeld bestaande userId
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        res.should.have.status(200);
+        res.body.should.have.property('message');
+        res.body.should.have.property('data').that.is.an('object');
+        res.body.data.should.have.property('id').that.equals(49);
+        res.body.data.should.have.property('emailAdress');
+        res.body.data.should.have.property('firstName');
+        res.body.data.should.have.property('lastName');
+        done();
+      });
+  });
+});
