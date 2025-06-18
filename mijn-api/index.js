@@ -1,16 +1,20 @@
 const express = require('express');
 const app = express();
+
+console.log("✅ App geladen");
 const db = require('./src/dao/mysql-db');
+
+
 
 const PORT = 3000;
 app.use(express.json());
 
 
 const authRoutes = require('./src/routes/authentication.routes').routes;
-app.use('/api/auth', authRoutes);
+app.use('/api', authRoutes);
 
 const userRoutes = require('./src/routes/users.routes');
-app.use('/api/users', userRoutes);
+app.use('/api/user', userRoutes);
 
 const mealRoutes = require('./src/routes/meals.routes');
 app.use('/api/meals', mealRoutes);
@@ -32,6 +36,5 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Server draait op http://localhost:${PORT}`);
-});
+
+module.exports = app;

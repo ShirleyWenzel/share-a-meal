@@ -1,81 +1,111 @@
-const jwt = require('jsonwebtoken')
-const db = require('../dao/mysql-db')
-const logger = require('../util/logger')
-const jwtSecretKey = require('../util/config').secretkey
+
+const jwt = require('jsonwebtoken');
+const db = require('../dao/mysql-db');
+const logger = require('../util/logger');
+const jwtSecretKey = require('../util/config').secretkey;
 
 const authService = {
-    login: (userCredentials, callback) => {
-        logger.debug('login');
-        db.getConnection((err, connection) => {
+  login: (userCredentials, callback) => {
+    logger.debug('login', userCredentials.emailAdress);
+
+    db.getConnection((err, connection) => {
+      if (err) {
+        logger.error(err);
+        return callback({ status: 500, message: 'Databasefout' });
+      }
+
+      connection.query(
+        'SELECT id, emailAdress, password, firstName, lastName FROM user WHERE emailAdress = ?',
+        [userCredentials.emailAdress],
+        (err, rows) => {
+          connection.release();
+
+          if (err) {
+            logger.error('Query error:', err);
+            return callback({ status: 500, message: 'Databasequery mislukt' });
+          }
+
+          if (rows.length === 0) {
+            return callback({ status: 404, message: 'Gebruiker bestaat niet' });
+          }
+
+          const user = rows[0];
+
+          if (user.password !== userCredentials.password) {
+            return callback({ status: 400, message: 'Ongeldig e-mailadres of wachtwoord' });
+          }
+
+          const payload = { userId: user.id };
+
+          jwt.sign(payload, jwtSecretKey, { expiresIn: '12d' }, (err, token) => {
             if (err) {
-                logger.error(err);
-                return callback({ status: 500, message: 'Databasefout' });
+              return callback({ status: 500, message: 'Token signing error' });
             }
 
-            connection.query(
-                'SELECT `id`, `emailAdress`, `password`, `firstName`, `lastName` FROM `user` WHERE `emailAdress` = ?',
-                [userCredentials.emailAdress],
-                (err, rows) => {
-                    connection.release();
-                    if (err) {
-                        logger.error('Error: ', err.toString());
-                        return callback({ status: 500, message: err.message });
-                    }
-
-                    if (rows.length === 1 && rows[0].password === userCredentials.password) {
-                        const { password, ...userinfo } = rows[0];
-                        const payload = { userId: userinfo.id };
-
-                        jwt.sign(payload, jwtSecretKey, { expiresIn: '12d' }, (err, token) => {
-                            if (err) {
-                                return callback({ status: 500, message: 'Token signing error' });
-                            }
-                            callback(null, {
-                                status: 200,
-                                message: 'User logged in',
-                                data: { ...userinfo, token }
-                            });
-                        });
-                    } else {
-                        return callback({ status: 400, message: 'Ongeldig e-mailadres of wachtwoord' });
-                    }
-                }
-            );
-        });
-    },
-
-    register: (user, callback) => {
-        db.getConnection((err, conn) => {
-            if (err) return callback({ status: 500, message: 'Databasefout' });
-
-            conn.query('SELECT id FROM user WHERE emailAdress = ?', [user.emailAdress], (err, rows) => {
-                if (err) {
-                    conn.release();
-                    return callback({ status: 500, message: 'Queryfout' });
-                }
-
-                if (rows.length > 0) {
-                    conn.release();
-                    return callback({ status: 409, message: 'Email bestaat al' });
-                }
-
-                conn.query(
-                    `INSERT INTO user (emailAdress, password, firstName, lastName) VALUES (?, ?, ?, ?)`,
-                    [user.emailAdress, user.password, user.firstName, user.lastName],
-                    (err, results) => {
-                        conn.release();
-                        if (err) return callback({ status: 500, message: 'Fout bij opslaan' });
-                        callback(null, {
-                            id: results.insertId,
-                            emailAdress: user.emailAdress,
-                            firstName: user.firstName,
-                            lastName: user.lastName
-                        });
-                    }
-                );
+            callback(null, {
+              status: 200,
+              message: 'User logged in',
+              data: {
+                id: user.id,
+                emailAdress: user.emailAdress,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                token: token
+              }
             });
-        });
-    }
-}
+          });
+        }
+      );
+    });
+  },
 
-module.exports = authService
+  register: (user, callback) => {
+    db.getConnection((err, conn) => {
+      if (err) return callback({ status: 500, message: 'Databasefout' });
+
+      conn.query('SELECT id FROM user WHERE emailAdress = ?', [user.emailAdress], (err, rows) => {
+        if (err) {
+          conn.release();
+          return callback({ status: 500, message: 'Queryfout' });
+        }
+
+        if (rows.length > 0) {
+          conn.release();
+          return callback({ status: 403, message: 'Gebruiker bestaat al' });
+        }
+
+        conn.query(
+          `INSERT INTO user 
+           (emailAdress, password, firstName, lastName, phoneNumber, street, city)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            user.emailAdress,
+            user.password, // plain text
+            user.firstName,
+            user.lastName,
+            user.phoneNumber,
+            user.street,
+            user.city
+          ],
+          (err, results) => {
+            conn.release();
+
+            if (err) {
+              logger.error('Insert error:', err);
+              return callback({ status: 500, message: 'Fout bij opslaan gebruiker' });
+            }
+
+           callback(null, {
+           id: results.insertId,
+           emailAdress: user.emailAdress,
+           firstName: user.firstName,
+           lastName: user.lastName
+});
+          }
+        );
+      });
+    });
+  }
+};
+
+module.exports = authService;

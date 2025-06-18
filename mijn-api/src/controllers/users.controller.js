@@ -1,5 +1,6 @@
 const db = require('../dao/mysql-db');
 
+
 const userController = {
   getAllUsers: (req, res, next) => {
     const filters = [];

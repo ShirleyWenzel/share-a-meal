@@ -2,10 +2,11 @@
   "name": "mijn-api",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
-  },
+  "type": "commonjs",
+ "scripts": {
+  "start": "node server.js",
+  "test": "mocha"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -15,5 +16,11 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.14.1"
+  },
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "chai-http": "^4.3.0",
+    "mocha": "^11.7.0",
+    "supertest": "^7.1.1"
   }
 }
