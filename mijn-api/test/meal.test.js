@@ -271,3 +271,58 @@ describe('UC-304 Opvragen van maaltijd bij ID', () => {
       });
   });
 });
+
+describe('UC-305 Verwijderen van maaltijd', () => {
+  let token;
+  let mealIdToDelete;
+
+  before((done) => {
+    // Login om token te krijgen
+    chai.request(server)
+      .post('/api/login')
+      .send({ emailAdress: 't.ester@example.com', password: 'Wachtwoord123' })
+      .end((err, res) => {
+        if (err) return done(err);
+        token = res.body.data.token;
+
+        // Maak een maaltijd aan om te verwijderen
+        chai.request(server)
+          .post('/api/meal')
+          .set('Authorization', `Bearer ${token}`)
+          .send({
+            name: 'Test Meal',
+            description: 'Test description',
+            price: 10.5,
+            dateTime: '2025-07-01T19:00:00.000Z',
+            maxAmountOfParticipants: 5,
+            imageUrl: 'https://example.com/image.jpg'
+          })
+          .end((err2, res2) => {
+            if (err2) return done(err2);
+            mealIdToDelete = res2.body.data.id;
+            done();
+          });
+      });
+  });
+
+  it('TC-305-3 Maaltijd bestaat niet', (done) => {
+    chai.request(server)
+      .delete('/api/meal/9999999')
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        res.should.have.status(404);
+        done();
+      });
+  });
+
+  it('TC-305-4 Maaltijd succesvol verwijderd', (done) => {
+    chai.request(server)
+      .delete(`/api/meal/${mealIdToDelete}`)
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        res.should.have.status(200);
+        done();
+      });
+  });
+});
+
