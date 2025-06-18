@@ -248,3 +248,26 @@ describe('UC-303 Opvragen van alle maaltijden', () => {
       });
   });
 });
+
+describe('UC-304 Opvragen van maaltijd bij ID', () => {
+  it('TC-304-1 Maaltijd bestaat niet', (done) => {
+    chai.request(server)
+      .get('/api/meal/9999999')  // id die niet bestaat
+      .end((err, res) => {
+        res.should.have.status(404);
+        done();
+      });
+  });
+
+  it('TC-304-2 Details van maaltijd geretourneerd', (done) => {
+ 
+    chai.request(server)
+      .get('/api/meal/1') // voorbeeld id; pas aan naar een bestaande maaltijd id
+      .end((err, res) => {
+        res.should.have.status(200);
+        res.body.should.be.an('object');
+        res.body.data.should.include.keys('id', 'name', 'description', 'price', 'dateTime', 'maxAmountOfParticipants', 'imageUrl', 'cook');
+        done();
+      });
+  });
+});
