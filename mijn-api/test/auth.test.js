@@ -324,7 +324,7 @@ describe('UC-205 Updaten van usergegevens', () => {
   before((done) => {
     chai.request(server)
       .post('/api/login')
-      .send({ emailAdress: 'j.wenzel@avans.nl', password: 'Wachtwoord123' })
+      .send({ emailAdress: 's.wenzel@avans.nl', password: 'Wachtwoord123' })
       .end((err, res) => {
         should.not.exist(err);
         res.should.have.status(200);
@@ -390,7 +390,7 @@ it('TC-205-4 Gebruiker bestaat niet', (done) => {
   it('TC-205-5 Niet ingelogd', (done) => {
     chai.request(server)
       .put(`/api/user/${existingUserId}`)
-      .send({ emailAdress: 'j.wenzel@avans.nl', firstName: 'Test' }) // zonder token
+      .send({ emailAdress: 's.wenzel@avans.nl', firstName: 'Shirley' }) // zonder token
       .end((err, res) => {
         res.should.have.status(401);
         res.body.should.have.property('message');
@@ -403,13 +403,81 @@ it('TC-205-4 Gebruiker bestaat niet', (done) => {
       .put(`/api/user/${existingUserId}`)
       .set('Authorization', `Bearer ${token}`)
       .send({
-        emailAdress: 'j.wenzel@avans.nl',
+        emailAdress: 's.wenzel@avans.nl',
         firstName: 'NieuweNaam',
         phoneNumber: '0612345678'
       })
       .end((err, res) => {
         res.should.have.status(200);
         res.body.should.have.property('message');
+        done();
+      });
+  });
+});
+
+describe('UC-206 Verwijderen van user', () => {
+  let token;
+  let userIdToDelete;
+  const password = 'Wachtwoord123';
+  const email = `deleteuser${Date.now()}@avans.nl`;
+
+  before((done) => {
+    // 1. Maak een nieuwe user aan voor verwijdertest
+    chai.request(server)
+      .post('/api/user')
+      .send({
+        emailAdress: email,
+        password: password,
+        firstName: 'Delete',
+        lastName: 'Me',
+        phoneNumber: '0612345678',
+        street: 'Straat 1',
+        city: 'Breda'
+      })
+      .end((err, res) => {
+        if (err) return done(err);
+        userIdToDelete = res.body.data.id;
+
+        // 2. Log in als die nieuwe user
+        chai.request(server)
+          .post('/api/login')
+          .send({ emailAdress: email, password: password })
+          .end((err2, res2) => {
+            if (err2) return done(err2);
+            token = res2.body.data.token;
+            done();
+          });
+      });
+  });
+
+  it('TC-206-1 Gebruiker bestaat niet', (done) => {
+    chai.request(server)
+      .delete('/api/user/9999999')
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        res.should.have.status(404);
+        done();
+      });
+  });
+
+it('TC-206-3 Gebruiker is niet de eigenaar van de data', (done) => {
+  
+  chai.request(server)
+    .delete('/api/user/93')
+    .set('Authorization', `Bearer ${token}`) 
+    .end((err, res) => {
+      res.should.have.status(403);
+      res.body.message.should.include('alleen je eigen');
+      done();
+    });
+});
+
+  it('TC-206-4 Gebruiker succesvol verwijderd', (done) => {
+    chai.request(server)
+      .delete(`/api/user/${userIdToDelete}`)
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        res.should.have.status(200);
         done();
       });
   });

@@ -116,7 +116,8 @@ const userController = {
 updateUser: (req, res, next) => {
   try {
     const userIdFromParams = parseInt(req.params.id);
-
+    const userIdFromToken = req.userId;
+    console.log('Token userId:', userIdFromToken, 'URL param:', userIdFromParams);
     db.getConnection((err, conn) => {
       if (err) {
         return next({ status: 500, message: 'Databasefout', data: {} });
@@ -184,50 +185,60 @@ updateUser: (req, res, next) => {
 },
 
 deleteUser: (req, res, next) => {
-  const userIdFromParams = parseInt(req.params.id);
-  const userIdFromToken = req.userId;
+  try {
+    const userIdFromParams = parseInt(req.params.id);
+    const userIdFromToken = req.userId;
 
-  if (userIdFromParams !== userIdFromToken) {
-    return res.status(403).json({
-      status: 403,
-      message: 'Je mag alleen je eigen account verwijderen.',
-      data: {}
-    });
-  }
-
-  db.getConnection((err, conn) => {
-    if (err) return next({ status: 500, message: 'Databasefout', data: {} });
-
-    // Check of de user bestaat
-    conn.query('SELECT id FROM user WHERE id = ?', [userIdFromParams], (err, results) => {
+    db.getConnection((err, conn) => {
       if (err) {
-        conn.release();
-        return next({ status: 500, message: 'Queryfout', data: {} });
+        return next({ status: 500, message: 'Databasefout', data: {} });
       }
 
-      if (results.length === 0) {
-        conn.release();
-        return res.status(404).json({
-          status: 404,
-          message: 'Gebruiker niet gevonden',
-          data: {}
-        });
-      }
+      // Eerst check of user bestaat
+      conn.query('SELECT id FROM user WHERE id = ?', [userIdFromParams], (err, rows) => {
+        if (err) {
+          conn.release();
+          return next({ status: 500, message: 'Query fout', data: {} });
+        }
 
-      // Verwijder de gebruiker
-      conn.query('DELETE FROM user WHERE id = ?', [userIdFromParams], (err, deleteResult) => {
-        conn.release();
-        if (err) return next({ status: 500, message: 'Verwijderen mislukt', data: {} });
+        if (rows.length === 0) {
+          conn.release();
+          return res.status(404).json({
+            status: 404,
+            message: 'Gebruiker bestaat niet',
+            data: {}
+          });
+        }
 
-        res.status(200).json({
-          status: 200,
-          message: 'Gebruiker succesvol verwijderd',
-          data: {}
+        // User bestaat, nu check rechten
+        console.log('Token userId:', userIdFromToken, 'Param userId:', userIdFromParams);
+        if (userIdFromParams !== userIdFromToken) {
+          conn.release();
+          return res.status(403).json({
+            status: 403,
+            message: 'Je mag alleen je eigen account verwijderen.',
+            data: {}
+          });
+        }
+
+        // Delete uitvoeren
+        conn.query('DELETE FROM user WHERE id = ?', [userIdFromParams], (err) => {
+          conn.release();
+          if (err) {
+            return next({ status: 500, message: 'Verwijderen mislukt', data: {} });
+          }
+
+          res.status(200).json({
+            status: 200,
+            message: 'Gebruiker succesvol verwijderd',
+            data: {}
+          });
         });
       });
     });
-  });
-}
-};
+  } catch (err) {
+    next({ status: 500, message: 'Onbekende fout in deleteUser', data: {} });
+  }
+}}
 
 module.exports = userController;
