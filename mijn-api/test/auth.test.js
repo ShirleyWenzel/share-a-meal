@@ -1,10 +1,11 @@
-
 const chai = require('chai');
 const chaiHttp = require('chai-http');
 const server = require('../index');
 const should = chai.should();
 
 chai.use(chaiHttp);
+
+let token;
 
 describe('UC-101 Inloggen', () => {
   it('TC-101-1 Verplicht veld ontbreekt', (done) => {
@@ -121,6 +122,98 @@ describe('UC-201 Registreren als nieuwe user', () => {
         res.should.have.status(201);
         res.body.should.have.property('data');
         res.body.data.should.have.property('id').that.is.a('number');
+        done();
+      });
+  });
+});
+
+describe('UC-202 Opvragen van overzicht van users', () => {
+  before((done) => {
+    chai.request(server)
+      .post('/api/login')
+      .send({ emailAdress: 'j.wenzel@avans.nl', password: 'Wachtwoord123' })
+      .end((err, res) => {
+        should.not.exist(err);
+        res.should.have.status(200);
+        res.body.should.have.property('data');
+        res.body.data.should.have.property('token');
+        token = res.body.data.token;
+        done();
+      });
+  });
+
+  it('TC-202-1 Toon alle gebruikers (minimaal 2)', (done) => {
+    chai.request(server)
+      .get('/api/user')
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.should.have.status(200);
+        res.body.should.have.property('message');
+        res.body.should.have.property('data').that.is.an('array');
+        res.body.data.length.should.be.at.least(2);
+        done();
+      });
+  });
+
+  it('TC-202-2 Toon gebruikers met zoekterm op niet-bestaande velden', (done) => {
+    chai.request(server)
+      .get('/api/user?nonExistingField=abcd')
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.should.have.status(200);
+        res.body.should.have.property('data').that.is.an('array');
+        done();
+      });
+  });
+
+  it('TC-202-3 Toon gebruikers met zoekterm op isActive=false', (done) => {
+    chai.request(server)
+      .get('/api/user?isActive=false')
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.should.have.status(200);
+        res.body.should.have.property('data').that.is.an('array');
+    res.body.data.forEach(user => {
+  user.should.have.property('isActive').that.satisfies(val =>
+    val === 0 || val === 1 || val === "0" || val === "1" || val === false || val === true
+  );
+});
+        done();
+      });
+  });
+
+  it('TC-202-4 Toon gebruikers met zoekterm op isActive=true', (done) => {
+    chai.request(server)
+      .get('/api/user?isActive=true')
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.should.have.status(200);
+        res.body.should.have.property('data').that.is.an('array');
+        res.body.data.forEach(user => {
+  user.should.have.property('isActive').that.satisfies(val =>
+    val === 1 || val === true || val === "1"
+  );
+});
+        done();
+      });
+  });
+
+  it('TC-202-5 Toon gebruikers met zoektermen op bestaande velden (max 2 filters)', (done) => {
+    chai.request(server)
+      .get('/api/user?isActive=true&firstName=Jan')
+      .set('Authorization', `Bearer ${token}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.should.have.status(200);
+        res.body.should.have.property('data').that.is.an('array');
+        res.body.data.forEach(user => {
+          user.should.have.property('isActive').that.satisfies(val => val === 1 || val === true);
+          user.should.have.property('firstName').that.includes('Jan');
+        });
         done();
       });
   });

@@ -6,10 +6,15 @@ const userController = {
     const filters = [];
     const values = [];
 
-    if (req.query.isActive !== undefined) {
-      filters.push('isActive = ?');
-      values.push(Number(req.query.isActive));
-    }
+ if (req.query.isActive !== undefined) {
+  let isActiveNum;
+  if (req.query.isActive === 'true') isActiveNum = 1;
+  else if (req.query.isActive === 'false') isActiveNum = 0;
+  else isActiveNum = Number(req.query.isActive);
+
+  filters.push('isActive = ?');
+  values.push(isActiveNum);
+}
 
     if (req.query.firstName) {
       filters.push('firstName LIKE ?');
