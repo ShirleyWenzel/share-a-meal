@@ -235,3 +235,16 @@ describe('UC-302 Wijzigen van maaltijdsgegevens', () => {
       });
   });
 });
+
+describe('UC-303 Opvragen van alle maaltijden', () => {
+  it('TC-303-1 Lijst van maaltijden geretourneerd', (done) => {
+    chai.request(server)
+      .get('/api/meal')
+      .end((err, res) => {
+        res.should.have.status(200);
+        res.body.should.be.an('object');
+        res.body.data.should.be.an('array');
+        done();
+      });
+  });
+});
