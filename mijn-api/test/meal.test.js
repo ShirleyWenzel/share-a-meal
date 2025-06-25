@@ -65,7 +65,7 @@ describe('UC-301 Toevoegen van maaltijd', () => {
       name: "Spaghetti Bolognese",
       description: "Dé pastaklassieker bij uitstek.",
       price: 6.75,
-      dateTime: "2025-07-01T18:30:00Z",
+      dateTime: "2025-07-01T18:30:00",
       maxAmountOfParticipants: 6,
       imageUrl: "https://miljuschka.nl/wp-content/uploads/2021/02/Pasta-bolognese-3-2.jpg"
     };
@@ -150,7 +150,7 @@ describe('UC-302 Wijzigen van maaltijdsgegevens', () => {
                         name: 'Test Maaltijd',
                         description: 'Test beschrijving',
                         price: 10.5,
-                        dateTime: new Date(Date.now() + 3600 * 1000).toISOString(), // 1 uur in de toekomst
+                       dateTime: new Date(Date.now() + 3600 * 1000).toISOString().slice(0, 19).replace('T', ' '), // 1 uur in de toekomst
                         maxAmountOfParticipants: 5,
                         imageUrl: 'https://example.com/image.jpg'
                       })
@@ -221,7 +221,9 @@ describe('UC-302 Wijzigen van maaltijdsgegevens', () => {
   });
 
   it('TC-302-5 Maaltijd succesvol gewijzigd', (done) => {
+     console.log('🤖 mealIdToUpdate =', mealIdToUpdate);
     chai.request(server)
+    
       .put(`/api/meal/${mealIdToUpdate}`)
       .set('Authorization', `Bearer ${token}`)
       .send({
@@ -293,7 +295,7 @@ describe('UC-305 Verwijderen van maaltijd', () => {
             name: 'Test Meal',
             description: 'Test description',
             price: 10.5,
-            dateTime: '2025-07-01T19:00:00.000Z',
+            dateTime: '2025-07-01T19:00:00.000',
             maxAmountOfParticipants: 5,
             imageUrl: 'https://example.com/image.jpg'
           })

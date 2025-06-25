@@ -5,8 +5,11 @@ const mealController = {
     const cookId = req.userId;
     const { name, description, price, dateTime, maxAmountOfParticipants, imageUrl } = req.body;
 
-    // Validatie
+    console.log('👨‍🍳 createMeal - cookId:', cookId);
+    console.log('📦 createMeal - gegevens:', req.body);
+
     if (!name || !description || !price || !dateTime || !maxAmountOfParticipants || !imageUrl) {
+      console.warn('⚠️ createMeal - verplichte velden ontbreken');
       return res.status(400).json({
         status: 400,
         message: 'Verplichte velden ontbreken.',
@@ -15,114 +18,135 @@ const mealController = {
     }
 
     db.getConnection((err, conn) => {
-      if (err) return next({ status: 500, message: 'Databasefout' });
+      if (err) {
+        console.error('❌ createMeal - fout bij verbinding:', err);
+        return next({ status: 500, message: 'Databasefout' });
+      }
 
       const query = `
         INSERT INTO meal (name, description, price, dateTime, maxAmountOfParticipants, imageUrl, cookId)
         VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
-      conn.query(
-        query,
-        [name, description, price, dateTime, maxAmountOfParticipants, imageUrl, cookId],
-        (err, results) => {
-          conn.release();
-          if (err) return next({ status: 500, message: 'Fout bij opslaan' });
+      conn.query(query, [name, description, price, dateTime, maxAmountOfParticipants, imageUrl, cookId], (err, results) => {
+        conn.release();
 
-          res.status(201).json({
-            status: 201,
-            message: 'Maaltijd succesvol aangemaakt',
-            data: {
-              id: results.insertId,
-              name,
-              description,
-              price,
-              dateTime,
-              maxAmountOfParticipants,
-              imageUrl,
-              cookId
-            }
-          });
+        if (err) {
+          console.error('❌ createMeal - queryfout:', err);
+          return next({ status: 500, message: 'Fout bij opslaan' });
         }
-      );
-    });
-  },
-  updateMeal: (req, res, next) => {
-  const mealId = parseInt(req.params.id);
-  const cookIdFromToken = req.userId;
-  const { name, price, maxAmountOfParticipants } = req.body;
 
-  // Check of verplichte velden aanwezig zijn
-  if (!name || !price || !maxAmountOfParticipants) {
-    return res.status(400).json({
-      status: 400,
-      message: 'Verplichte velden ontbreken.',
-      data: {}
-    });
-  }
-
-  db.getConnection((err, conn) => {
-    if (err) return next({ status: 500, message: 'Databasefout' });
-
-    // Check of maaltijd bestaat en van deze gebruiker is
-    conn.query('SELECT * FROM meal WHERE id = ?', [mealId], (err, results) => {
-      if (err) {
-        conn.release();
-        return next({ status: 500, message: 'Queryfout' });
-      }
-
-      if (results.length === 0) {
-        conn.release();
-        return res.status(404).json({
-          status: 404,
-          message: 'Maaltijd niet gevonden.',
-          data: {}
-        });
-      }
-
-      const meal = results[0];
-      if (meal.cookId !== cookIdFromToken) {
-        conn.release();
-        return res.status(403).json({
-          status: 403,
-          message: 'Je bent niet de eigenaar van deze maaltijd.',
-          data: {}
-        });
-      }
-
-      // Voer update uit
-      const updateQuery = `
-        UPDATE meal SET name = ?, price = ?, maxAmountOfParticipants = ?
-        WHERE id = ?
-      `;
-      conn.query(updateQuery, [name, price, maxAmountOfParticipants, mealId], (err, result) => {
-        conn.release();
-        if (err) return next({ status: 500, message: 'Update mislukt' });
-
-        res.status(200).json({
-          status: 200,
-          message: 'Maaltijd succesvol bijgewerkt',
-          data: { id: mealId, name, price, maxAmountOfParticipants }
+        console.log('✅ Maaltijd aangemaakt met ID:', results.insertId);
+        res.status(201).json({
+          status: 201,
+          message: 'Maaltijd succesvol aangemaakt',
+          data: {
+            id: results.insertId,
+            name,
+            description,
+            price,
+            dateTime,
+            maxAmountOfParticipants,
+            imageUrl,
+            cookId
+          }
         });
       });
     });
-  });
-},
+  },
+
+  updateMeal: (req, res, next) => {
+    const mealId = parseInt(req.params.id);
+    const cookIdFromToken = req.userId;
+    const { name, price, maxAmountOfParticipants } = req.body;
+
+    console.log('🛠️ updateMeal - mealId:', mealId, '| userId:', cookIdFromToken);
+    console.log('📦 updateMeal - gegevens:', req.body);
+
+    if (!name || !price || !maxAmountOfParticipants) {
+      return res.status(400).json({
+        status: 400,
+        message: 'Verplichte velden ontbreken.',
+        data: {}
+      });
+    }
+
+    db.getConnection((err, conn) => {
+      if (err) {
+        console.error('❌ updateMeal - db fout:', err);
+        return next({ status: 500, message: 'Databasefout' });
+      }
+
+      conn.query('SELECT * FROM meal WHERE id = ?', [mealId], (err, results) => {
+        if (err) {
+          conn.release();
+          console.error('❌ updateMeal - SELECT fout:', err);
+          return next({ status: 500, message: 'Queryfout' });
+        }
+
+        if (results.length === 0) {
+          conn.release();
+          console.warn('⚠️ updateMeal - maaltijd niet gevonden');
+          return res.status(404).json({
+            status: 404,
+            message: 'Maaltijd niet gevonden.',
+            data: {}
+          });
+        }
+
+        const meal = results[0];
+        console.log('🔎 updateMeal - gevonden maaltijd:', meal);
+
+        if (meal.cookId !== cookIdFromToken) {
+          conn.release();
+          console.warn('⛔ updateMeal - geen eigenaar');
+          return res.status(403).json({
+            status: 403,
+            message: 'Je bent niet de eigenaar van deze maaltijd.',
+            data: {}
+          });
+        }
+
+        const updateQuery = `
+          UPDATE meal SET name = ?, price = ?, maxAmountOfParticipants = ?
+          WHERE id = ?`;
+
+        conn.query(updateQuery, [name, price, maxAmountOfParticipants, mealId], (err) => {
+          conn.release();
+
+          if (err) {
+            console.error('❌ updateMeal - update fout:', err);
+            return next({ status: 500, message: 'Update mislukt' });
+          }
+
+          console.log('✅ Maaltijd geüpdatet:', mealId);
+          res.status(200).json({
+            status: 200,
+            message: 'Maaltijd succesvol bijgewerkt',
+            data: { id: mealId, name, price, maxAmountOfParticipants }
+          });
+        });
+      });
+    });
+  },
 
   getAllMeals: (req, res, next) => {
     db.getConnection((err, conn) => {
-      if (err) return next({ status: 500, message: 'Databaseverbinding mislukt' });
+      if (err) {
+        console.error('❌ getAllMeals - DB fout:', err);
+        return next({ status: 500, message: 'Databaseverbinding mislukt' });
+      }
 
       const query = `
-        SELECT 
-          m.id, m.name, m.description, m.price, m.dateTime, 
-          m.maxAmountOfParticipants, m.imageUrl, 
-          u.id AS cookId, u.firstName AS cookFirstName, u.lastName AS cookLastName
-        FROM meal m
-        LEFT JOIN user u ON m.cookId = u.id`;
+        SELECT m.*, u.id AS cookId, u.firstName AS cookFirstName, u.lastName AS cookLastName
+        FROM meal m LEFT JOIN user u ON m.cookId = u.id`;
 
       conn.query(query, (err, results) => {
         conn.release();
-        if (err) return next({ status: 500, message: 'Databasequery mislukt' });
+
+        if (err) {
+          console.error('❌ getAllMeals - query fout:', err);
+          return next({ status: 500, message: 'Databasequery mislukt' });
+        }
 
         const formattedMeals = results.map(r => ({
           id: r.id,
@@ -139,6 +163,7 @@ const mealController = {
           }
         }));
 
+        console.log('🍽️ Aantal maaltijden gevonden:', formattedMeals.length);
         res.status(200).json({
           status: 200,
           message: 'Maaltijden opgehaald',
@@ -149,116 +174,127 @@ const mealController = {
   },
 
   getMealById: (req, res, next) => {
-  const mealId = parseInt(req.params.id);
+    const mealId = parseInt(req.params.id);
+    console.log('🔍 getMealById - mealId:', mealId);
 
-  db.getConnection((err, conn) => {
-    if (err) return next({ status: 500, message: 'Databasefout' });
-
-    const query = `
-      SELECT 
-        m.id, m.name, m.description, m.price, m.dateTime,
-        m.maxAmountOfParticipants, m.imageUrl,
-        u.id AS cookId, u.firstName, u.lastName
-      FROM meal m
-      LEFT JOIN user u ON m.cookId = u.id
-      WHERE m.id = ?
-    `;
-
-    conn.query(query, [mealId], (err, results) => {
-      conn.release();
-      if (err) return next({ status: 500, message: 'Queryfout' });
-
-      if (results.length === 0) {
-        return res.status(404).json({
-          status: 404,
-          message: 'Maaltijd niet gevonden',
-          data: {}
-        });
+    db.getConnection((err, conn) => {
+      if (err) {
+        console.error('❌ getMealById - DB fout:', err);
+        return next({ status: 500, message: 'Databasefout' });
       }
 
-      const m = results[0];
+      const query = `
+        SELECT m.*, u.firstName, u.lastName FROM meal m
+        LEFT JOIN user u ON m.cookId = u.id
+        WHERE m.id = ?`;
 
-      res.status(200).json({
-        status: 200,
-        message: 'Maaltijddetails opgehaald',
-        data: {
-          id: m.id,
-          name: m.name,
-          description: m.description,
-          price: m.price,
-          dateTime: m.dateTime,
-          maxAmountOfParticipants: m.maxAmountOfParticipants,
-          imageUrl: m.imageUrl,
-          cook: {
-            id: m.cookId,
-            firstName: m.firstName,
-            lastName: m.lastName
-          }
+      conn.query(query, [mealId], (err, results) => {
+        conn.release();
+
+        if (err) {
+          console.error('❌ getMealById - query fout:', err);
+          return next({ status: 500, message: 'Queryfout' });
         }
+
+        if (results.length === 0) {
+          console.warn('⚠️ getMealById - maaltijd niet gevonden');
+          return res.status(404).json({
+            status: 404,
+            message: 'Maaltijd niet gevonden',
+            data: {}
+          });
+        }
+
+        const m = results[0];
+        res.status(200).json({
+          status: 200,
+          message: 'Maaltijddetails opgehaald',
+          data: {
+            id: m.id,
+            name: m.name,
+            description: m.description,
+            price: m.price,
+            dateTime: m.dateTime,
+            maxAmountOfParticipants: m.maxAmountOfParticipants,
+            imageUrl: m.imageUrl,
+            cook: {
+              id: m.cookId,
+              firstName: m.firstName,
+              lastName: m.lastName
+            }
+          }
+        });
       });
     });
-  });
-},
+  },
 
-deleteMeal: (req, res, next) => {
-  const mealId = parseInt(req.params.id);
-  const userId = req.userId;
+  deleteMeal: (req, res, next) => {
+    const mealId = parseInt(req.params.id);
+    const userId = req.userId;
 
-  db.getConnection((err, conn) => {
-    if (err) return next({ status: 500, message: 'Databaseverbinding mislukt' });
+    console.log('🗑️ deleteMeal - mealId:', mealId, '| userId:', userId);
 
-    // Stap 1: check of maaltijd bestaat
-    conn.query('SELECT * FROM meal WHERE id = ?', [mealId], (err, results) => {
+    db.getConnection((err, conn) => {
       if (err) {
-        conn.release();
-        return next({ status: 500, message: 'Queryfout bij zoeken maaltijd' });
+        console.error('❌ deleteMeal - DB fout:', err);
+        return next({ status: 500, message: 'Databaseverbinding mislukt' });
       }
 
-      if (results.length === 0) {
-        conn.release();
-        return res.status(404).json({
-          status: 404,
-          message: 'Maaltijd niet gevonden',
-          data: {}
-        });
-      }
-
-      const meal = results[0];
-
-      // Stap 2: check of user de eigenaar is
-      if (meal.cookId !== userId) {
-        conn.release();
-        return res.status(403).json({
-          status: 403,
-          message: 'Je bent niet de eigenaar van deze maaltijd',
-          data: {}
-        });
-      }
-
-      // Stap 3: verwijder eerst de aanmeldingen, daarna de maaltijd
-      conn.query('DELETE FROM meal_participants_user WHERE mealId = ?', [mealId], (err) => {
+      conn.query('SELECT * FROM meal WHERE id = ?', [mealId], (err, results) => {
         if (err) {
           conn.release();
-          return next({ status: 500, message: 'Fout bij verwijderen aanmeldingen' });
+          console.error('❌ deleteMeal - SELECT fout:', err);
+          return next({ status: 500, message: 'Queryfout bij zoeken maaltijd' });
         }
 
-        conn.query('DELETE FROM meal WHERE id = ?', [mealId], (err) => {
+        if (results.length === 0) {
           conn.release();
-          if (err) return next({ status: 500, message: 'Fout bij verwijderen maaltijd' });
+          return res.status(404).json({
+            status: 404,
+            message: 'Maaltijd niet gevonden',
+            data: {}
+          });
+        }
 
-          res.status(200).json({
-            status: 200,
-            message: 'Maaltijd en aanmeldingen succesvol verwijderd',
-            data: {
-              deleted: mealId
+        const meal = results[0];
+
+        if (meal.cookId !== userId) {
+          conn.release();
+          console.warn('⛔ deleteMeal - geen eigenaar');
+          return res.status(403).json({
+            status: 403,
+            message: 'Je bent niet de eigenaar van deze maaltijd',
+            data: {}
+          });
+        }
+
+        conn.query('DELETE FROM meal_participants_user WHERE mealId = ?', [mealId], (err) => {
+          if (err) {
+            conn.release();
+            console.error('❌ deleteMeal - fout bij verwijderen aanmeldingen:', err);
+            return next({ status: 500, message: 'Fout bij verwijderen aanmeldingen' });
+          }
+
+          conn.query('DELETE FROM meal WHERE id = ?', [mealId], (err) => {
+            conn.release();
+            if (err) {
+              console.error('❌ deleteMeal - fout bij verwijderen maaltijd:', err);
+              return next({ status: 500, message: 'Fout bij verwijderen maaltijd' });
             }
+
+            console.log('✅ Maaltijd verwijderd:', mealId);
+            res.status(200).json({
+              status: 200,
+              message: 'Maaltijd en aanmeldingen succesvol verwijderd',
+              data: {
+                deleted: mealId
+              }
+            });
           });
         });
       });
     });
-  });
-}
-
+  }
 };
 
 module.exports = mealController;
