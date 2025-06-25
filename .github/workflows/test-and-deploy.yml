@@ -7,9 +7,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mijn-api
 
     steps:
       - name: 📥 Checkout repo
@@ -31,7 +28,9 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
-        run: npm test
+        run: |
+          chmod +x ./node_modules/.bin/mocha
+          npm test
 
   deploy:
     needs: test
