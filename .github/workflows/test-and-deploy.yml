@@ -2,7 +2,7 @@ name: Test and Deploy to Render
 
 on:
   push:
-    branches: [release]  
+    branches: [release]
 
 jobs:
   test:
@@ -20,6 +20,10 @@ jobs:
       - name: 📦 Install dependencies
         working-directory: ./mijn-api
         run: npm install
+
+      - name: 🛠️ Fix permissions for Mocha
+        working-directory: ./mijn-api
+        run: chmod +x ./node_modules/.bin/mocha
 
       - name: 🧪 Run tests
         working-directory: ./mijn-api
