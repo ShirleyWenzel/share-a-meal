@@ -2,11 +2,14 @@ name: Test and Deploy to Render
 
 on:
   push:
-    branches: [release]  # Pas aan indien je een andere branch gebruikt
+    branches: [release]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mijn-api
 
     steps:
       - name: 📥 Checkout repo
