@@ -18,9 +18,11 @@ jobs:
           node-version: 18
 
       - name: 📦 Install dependencies
+        working-directory: ./mijn-api
         run: npm install
 
       - name: 🧪 Run tests
+        working-directory: ./mijn-api
         run: npm test
 
   deploy:
