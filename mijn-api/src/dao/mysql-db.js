@@ -1,13 +1,14 @@
 const mysql = require('mysql2');
+require('dotenv').config();
 
 const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '',         // meestal leeg bij XAMPP
-  database: 'share-a-meal',
+  uri: process.env.DATABASE_URL,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  ssl: {
+    rejectUnauthorized: true 
+  }
 });
 
 module.exports = pool;
