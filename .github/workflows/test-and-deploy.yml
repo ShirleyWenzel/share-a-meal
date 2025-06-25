@@ -18,9 +18,11 @@ jobs:
           node-version: 18
 
       - name: 📦 Install dependencies
+        working-directory: mijn-api
         run: npm install
 
       - name: 🧪 Run tests
+        working-directory: mijn-api
         env:
           ENVIRONMENT: production
           DB_HOST: ${{ secrets.DB_HOST }}
@@ -39,5 +41,4 @@ jobs:
 
     steps:
       - name: 🚀 Trigger Render deploy
-        run: |
-          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
