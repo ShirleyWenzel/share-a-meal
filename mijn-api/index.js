@@ -1,7 +1,7 @@
 const express = require('express');
 const app = express();
 
-console.log("✅ App geladen");
+
 const db = require('./src/dao/mysql-db');
 
 
