@@ -482,3 +482,10 @@ it('TC-206-3 Gebruiker is niet de eigenaar van de data', (done) => {
       });
   });
 });
+
+after(() => {
+  const pool = require('../src/dao/mysql-db');
+  pool.end(() => {
+    console.log('✅ Databaseverbinding afgesloten na tests');
+  });
+});
