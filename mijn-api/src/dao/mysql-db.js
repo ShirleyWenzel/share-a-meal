@@ -12,14 +12,17 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  ...(isLocal ? {} : { ssl: { rejectUnauthorized: true } })  // Alleen SSL voor online DB
+  ssl: isLocal
+    ? false // geen SSL voor lokale DB
+    : { rejectUnauthorized: false } // accepteer zelf-ondertekend certificaat voor Railway
 });
+
 
 pool.getConnection((err, connection) => {
   if (err) {
     console.error('❌ Database connectie mislukt:', err.message);
   } else {
-    console.log(`✅ Verbonden met ${isLocal ? 'lokale' : 'Railway'} database`);
+    console.log('✅ Verbonden met de', isLocal ? 'lokale' : 'online', 'database');
     connection.release();
   }
 });
