@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 module.exports = {
-  secretkey: 'supergeheime-jwt-key' // 🔐 kies zelf iets sterkers
+  secretkey: process.env.JWT_SECRET
 };
